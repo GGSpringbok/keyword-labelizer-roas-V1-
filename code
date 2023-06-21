@@ -1,9 +1,9 @@
 function main() {
   
-  const roasTarget = '3';  // Vul hier de target in van de ROAS
-  const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1oSXIdlsRlVme7N95kgOpDAGL0yGStNkUNxV4BVPGEFA/edit#gid=873624437'; // Vul hier de spreadsheetURL in
+  const roasTarget = 'ROASTARGET';  // Vul hier de target in van de ROAS: !ROAS van 100%? -> 1 INVULLEN!
+  const spreadsheetUrl = 'SPREADSHEETURL'; // Vul hier de spreadsheetURL in
   const spreadsheet = SpreadsheetApp.openByUrl(spreadsheetUrl);
-  const sheet = spreadsheet.getSheetByName('kingslizepizza.be - roas'); // Vul hier de naam van het tabblad in
+  const sheet = spreadsheet.getSheetByName('SHEETNAME'); // Vul hier de naam van het tabblad in
   
   //--------------------- Verander niks hieronder
   
@@ -30,7 +30,7 @@ function main() {
     AdsApp.createLabel(labelNameBadROAS);
   }
   
-  //Selecteer alle zoekwoorden en verwijderen beide labels
+  //Selecteer alle zoekwoorden en verwijder beide labels
   const keywordsAll = AdsApp.keywords()
     .forDateRange('LAST_30_DAYS')
     .get();
@@ -95,7 +95,7 @@ function main() {
     ]);
   }
   
-  //Selecteer alle zoekwoorden met meer dan 0 conversies en geef ze een label mee op basis van de cpaTarget
+  //Selecteer alle zoekwoorden met meer dan 0 conversies en geef ze een label mee op basis van de roasTarget
   const keywordsWithConversions = AdsApp.keywords()
     .withCondition('Conversions > 0')
     .forDateRange('LAST_30_DAYS')
