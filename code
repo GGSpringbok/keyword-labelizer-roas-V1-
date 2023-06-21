@@ -1,0 +1,145 @@
+function main() {
+  
+  const roasTarget = '3';  // Vul hier de target in van de ROAS
+  const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1oSXIdlsRlVme7N95kgOpDAGL0yGStNkUNxV4BVPGEFA/edit#gid=873624437'; // Vul hier de spreadsheetURL in
+  const spreadsheet = SpreadsheetApp.openByUrl(spreadsheetUrl);
+  const sheet = spreadsheet.getSheetByName('kingslizepizza.be - roas'); // Vul hier de naam van het tabblad in
+  
+  //--------------------- Verander niks hieronder
+  
+  sheet.clear();
+  
+  const labelNameGoodROAS = 'good_ROAS';
+  const labelNameBadROAS = 'bad_ROAS';
+  
+  const labelGoodROAS = AdsApp.labels()
+    .withCondition(`Name = "${labelNameGoodROAS}"`)
+    .get();
+  if (labelGoodROAS.hasNext()) {
+    Logger.log(`Label ${labelNameGoodROAS} already exists in this account`);
+  } else {
+    AdsApp.createLabel(labelNameGoodROAS);
+  }
+  
+  const labelBadROAS = AdsApp.labels()
+    .withCondition(`Name = "${labelNameBadROAS}"`)
+    .get();
+  if (labelBadROAS.hasNext()) {
+    Logger.log(`Label ${labelNameBadROAS} already exists in this account`);
+  } else {
+    AdsApp.createLabel(labelNameBadROAS);
+  }
+  
+  //Selecteer alle zoekwoorden en verwijderen beide labels
+  const keywordsAll = AdsApp.keywords()
+    .forDateRange('LAST_30_DAYS')
+    .get();
+  
+  while (keywordsAll.hasNext()) {
+    const keyword = keywordsAll.next();
+    keyword.removeLabel(labelNameGoodROAS);
+    keyword.removeLabel(labelNameBadROAS);
+  }    
+  
+  //Import reportdata
+  const accountName = AdsApp.currentAccount().getName();
+  const data = [['Keyword', 'KeywordMatchType', 'Impressions', 'Clicks', 'CTR', 'Cost', 'Average CPC', 'Conversions', 'Conversion Value', 'ROAS', 'ID', 'labelName']];
+  const report = AdsApp.report("SELECT Criteria, KeywordMatchType, Impressions, Clicks, Ctr, Cost, AverageCpc, Conversions, Id, ConversionValue" +
+  " FROM KEYWORDS_PERFORMANCE_REPORT" +
+  ' WHERE Conversions > 0' +
+  ' DURING LAST_30_DAYS' +
+  ' ORDER BY ConversionValue DESC' );  
+  
+  //Import keyworddata
+  let keywords = AdsApp.keywords().get();
+  
+  const rows = report.rows();
+  
+  while (rows.hasNext()) {
+    const row = rows.next();
+    const keyword = row['Criteria'];
+    const matchtype = row['KeywordMatchType'];
+    const impressions = row['Impressions'];
+    const clicks = row['Clicks'];
+    const ctr = row['Ctr'];
+    let cost = row['Cost'];
+    const averageCpc = row['AverageCpc'];
+    const conversions = row['Conversions'];
+    const ID = row['Id'];
+    let conversionValue = row['ConversionValue'];
+    let roas = (conversionValue.replace(",", "") / cost.replace(",", "")).toString();
+    roas.replace(".", "")
+    if (isNaN(roas)){
+      convValuePerCost = 0;
+    keyword.applyLabel(labelName);
+    }
+    
+    const labelName = (roas < roasTarget) ? labelNameBadROAS : labelNameGoodROAS;
+    
+    roas.replace(".", ",");
+    let roasInt = Number(roas);
+    
+    data.push([
+      keyword,
+      matchtype,
+      impressions,
+      clicks,
+      ctr,
+      cost,
+      averageCpc,
+      conversions,
+      conversionValue,
+      roasInt.toFixed(2),
+      ID,
+      labelName
+    ]);
+  }
+  
+  //Selecteer alle zoekwoorden met meer dan 0 conversies en geef ze een label mee op basis van de cpaTarget
+  const keywordsWithConversions = AdsApp.keywords()
+    .withCondition('Conversions > 0')
+    .forDateRange('LAST_30_DAYS')
+    .get();  
+    
+  let arrayKeywords = [];
+  
+  while (keywordsWithConversions.hasNext()) {
+    let keyword = keywordsWithConversions.next();
+    let kw = keyword.getText();
+    let matchType = keyword.getMatchType();
+    let id = keyword.getId();
+    arrayKeywords.push([
+      kw,
+      matchType,
+      id
+      ]);
+  }
+  
+  Logger.log(data);
+  
+  // Toevoeging van labels aan de keywords op basis van de query
+  
+  if (data.length > 1) {
+    sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+    
+    const keywordRange = sheet.getRange("A2:A" + (data.length + 1));
+    const labelNameRange = sheet.getRange("L2:L" + (data.length + 1));
+    
+    const keywordValues = keywordRange.getValues().flat();
+    const labelNameValues = labelNameRange.getValues().flat();
+    
+    for (let i = 0; i < keywordValues.length; i++) {
+      const keyword = keywordValues[i];
+      const labelName = labelNameValues[i];
+      
+      const keywordIterator = AdsApp.keywords()
+        .withCondition(`Text = "${keyword}"`)
+        .get();
+      
+      while (keywordIterator.hasNext()) {
+        const keyword = keywordIterator.next();
+        keyword.applyLabel(labelName);
+      }
+    }
+  }
+}
